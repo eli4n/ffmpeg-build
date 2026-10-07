@@ -21,7 +21,7 @@ and has two variants for each target:
 |---|---|
 | `linux-x64`, `linux-arm64` | native runners, inside Alpine (musl, fully static) |
 | `linux-x86` | x64 runner, 32-bit Alpine container |
-| `linux-armv7` | x64 runner, 32-bit ARM Alpine under QEMU |
+| `linux-armv7` | arm64 runner, 32-bit ARM Alpine container (runs natively) |
 | `darwin-arm64` | Apple Silicon runner, macOS 13 or later |
 | `darwin-x64` | cross-compiled on Apple Silicon, tested under Rosetta 2 |
 | `windows-x64`, `windows-x86` | cross-compiled with mingw-w64, tested on Windows |

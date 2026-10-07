@@ -40,10 +40,9 @@ die() {
 }
 
 # --- Target ----------------------------------------------------------------
-# Linux builds run natively inside a container of the target architecture
-# (emulated through QEMU where the runner has a different one). The check stops
-# a wrongly chosen container from quietly producing a binary for the wrong
-# architecture.
+# Linux builds run inside a container of the target architecture. The check
+# stops a wrongly chosen container from quietly producing a binary for the
+# wrong architecture.
 alpine_arch() {
 	[ -f /etc/alpine-release ] || die "$TARGET is built inside an Alpine container"
 	apk --print-arch
