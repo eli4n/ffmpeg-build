@@ -21,10 +21,10 @@ and has two variants for each target:
 |---|---|
 | `linux-x64`, `linux-arm64` | native runners, inside Alpine (musl, fully static) |
 | `linux-x86` | x64 runner, 32-bit Alpine container |
-| `linux-armv7`, `linux-ppc64le`, `linux-s390x`, `linux-riscv64` | x64 runner, Alpine under QEMU |
+| `linux-armv7` | x64 runner, 32-bit ARM Alpine under QEMU |
 | `darwin-arm64` | Apple Silicon runner, macOS 13 or later |
 | `darwin-x64` | cross-compiled on Apple Silicon, tested under Rosetta 2 |
-| `windows-x64` | cross-compiled with mingw-w64, tested on Windows |
+| `windows-x64`, `windows-x86` | cross-compiled with mingw-w64, tested on Windows |
 
 Each target comes as single gzipped binaries (`ffmpeg-slim-linux-x64.gz`,
 `ffprobe-slim-linux-x64.gz`) for scripts, and as one archive with both binaries

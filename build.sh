@@ -5,8 +5,9 @@
 #
 # Targets:
 #   linux-<arch>   inside an Alpine container of that architecture (static, musl)
-#                  arch: x64 arm64 armv7 x86 ppc64le s390x riscv64
-#   windows-x64    inside an x86_64 Alpine container with mingw-w64 (cross build)
+#                  arch: x64 arm64 x86 armv7
+#   windows-<arch> inside an x86_64 Alpine container with mingw-w64 (cross build)
+#                  arch: x64 x86
 #   darwin-arm64   on an Apple Silicon Mac
 #   darwin-x64     on an Apple Silicon Mac (cross build)
 set -euo pipefail
@@ -61,7 +62,7 @@ linux-*)
 	case ${TARGET#linux-} in
 	x64) want=x86_64 ;;
 	arm64) want=aarch64 ;;
-	x86 | armv7 | ppc64le | s390x | riscv64) want=${TARGET#linux-} ;;
+	x86 | armv7) want=${TARGET#linux-} ;;
 	*) die "unknown target $TARGET" ;;
 	esac
 	[ "$(alpine_arch)" = "$want" ] || die "$TARGET needs a $want container, running on $(alpine_arch)"
@@ -75,11 +76,17 @@ linux-*)
 		FF_LDFLAGS="-static -no-pie"
 	fi
 	;;
-windows-x64)
+windows-x64 | windows-x86)
 	[ "$(alpine_arch)" = x86_64 ] || die "$TARGET is built inside an x86_64 container"
-	CROSS_PREFIX=x86_64-w64-mingw32-
-	HOST=x86_64-w64-mingw32
-	FF_TARGET=(--enable-cross-compile --arch=x86_64 --target-os=mingw32 --cross-prefix=$CROSS_PREFIX)
+	if [ "$TARGET" = windows-x64 ]; then
+		HOST=x86_64-w64-mingw32
+		FF_TARGET=(--arch=x86_64)
+	else
+		HOST=i686-w64-mingw32
+		FF_TARGET=(--arch=x86)
+	fi
+	CROSS_PREFIX=$HOST-
+	FF_TARGET+=(--enable-cross-compile --target-os=mingw32 --cross-prefix=$CROSS_PREFIX)
 	FF_LDFLAGS=-static
 	EXE=.exe
 	;;
@@ -113,15 +120,13 @@ if [ "$ZLIB" = source ]; then
 	tar -xzf "$SRC/zlib-$ZLIB_VERSION.tar.gz" -C "$WORK"
 	(
 		cd "$WORK/zlib-$ZLIB_VERSION"
-		if [ "$TARGET" = windows-x64 ]; then
+		if [ -n "$EXE" ]; then
 			make -f win32/Makefile.gcc -j"$JOBS" PREFIX=$CROSS_PREFIX libz.a
 			mkdir -p "$PREFIX/lib" "$PREFIX/include"
 			cp libz.a "$PREFIX/lib/"
 			cp zlib.h zconf.h "$PREFIX/include/"
 		else
-			# --disable-crcvx: zlib's vectorised CRC for s390x is detected but then
-			# compiled without -mvx. The generic CRC is plenty for our use.
-			CC=$CC_FOR_TARGET CFLAGS="-O2 -fPIC" ./configure --static --disable-crcvx --prefix="$PREFIX"
+			CC=$CC_FOR_TARGET CFLAGS="-O2 -fPIC" ./configure --static --prefix="$PREFIX"
 			make -j"$JOBS" install
 		fi
 	)
@@ -136,13 +141,6 @@ fi
 tar -xzf "$SRC/lame-$LAME_VERSION.tar.gz" -C "$WORK"
 (
 	cd "$WORK/lame-$LAME_VERSION"
-	# LAME's config.sub and config.guess date from 2017 and know neither
-	# riscv64 nor "arm64-apple". The Alpine containers have current ones from
-	# automake; on macOS the BUILD rewrite above is enough.
-	for f in config.sub config.guess; do
-		newer=$(ls /usr/share/automake-*/$f 2>/dev/null | tail -1 || true)
-		if [ -n "$newer" ]; then cp "$newer" "$f"; fi
-	done
 	CC=$CC_FOR_TARGET CFLAGS="-O2 -Wno-implicit-function-declaration" ac_cv_prog_cc_c23=no \
 		./configure --prefix="$PREFIX" --host="$HOST" --build="$BUILD" \
 		--disable-shared --enable-static --disable-frontend --disable-decoder \
