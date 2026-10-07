@@ -65,12 +65,18 @@ cp "$ART"/sources/* "$REL/"
 sort -k2 "$DIST/release.sha256" >"$REL/SHA256SUMS"
 sort -k2 "$DIST/binaries.sha256" >"$REL/SHA256SUMS-binaries"
 
+# Absolute links in CI, where the repository and the run are known
+REPO=${GITHUB_REPOSITORY:-OWNER/REPO}
+REPO_URL=${GITHUB_SERVER_URL:-https://github.com}/$REPO
+RUN_URL=$REPO_URL/actions/workflows/release.yml
+[ -n "${GITHUB_RUN_ID:-}" ] && RUN_URL=$REPO_URL/actions/runs/$GITHUB_RUN_ID
+
 ffmpeg_tar=$(cd "$ART/sources" && ls ffmpeg-*.tar.xz)
 {
 	echo "FFmpeg ${ffmpeg_tar#ffmpeg-}" | sed 's/\.tar\.xz$//'
 	echo
-	echo "Built from source by this repository's [release workflow](../../actions/workflows/release.yml)."
-	echo "Every asset has a [build provenance attestation](../../attestations)."
+	echo "Built from source by [this workflow run]($RUN_URL)."
+	echo "Every asset and every unpacked binary has a [build provenance attestation]($REPO_URL/attestations)."
 	echo
 	echo "## Sources"
 	echo
@@ -95,7 +101,7 @@ ffmpeg_tar=$(cd "$ART/sources" && ls ffmpeg-*.tar.xz)
 	echo
 	echo '```sh'
 	echo "sha256sum -c --ignore-missing SHA256SUMS"
-	echo "gh attestation verify ffmpeg-slim-linux-x64.gz --repo \$OWNER/\$REPO"
+	echo "gh attestation verify ffmpeg-slim-linux-x64.gz --repo $REPO"
 	echo "gunzip ffmpeg-slim-linux-x64.gz && grep ' ffmpeg-slim-linux-x64\$' SHA256SUMS-binaries | sha256sum -c"
 	echo '```'
 } >"$DIST/NOTES.md"
