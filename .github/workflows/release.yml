@@ -196,8 +196,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.plan.outputs.tag }}
         run: |
+          # Only the highest version is marked latest; rebuilding an older
+          # branch must not take the label from the newest one.
+          highest=$( (gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 \
+            --json tagName --jq '.[].tagName'; echo "$TAG") | sort -V | tail -1)
+          latest=$([ "$highest" = "$TAG" ] && echo true || echo false)
           # A draft first: the release only becomes visible once every asset is
           # attached, and is never published half-uploaded.
           gh release create "$TAG" dist/release/* --draft --target "$GITHUB_SHA" \
             --title "FFmpeg $TAG" --notes-file dist/NOTES.md
-          gh release edit "$TAG" --draft=false
+          gh release edit "$TAG" --draft=false --latest="$latest"
