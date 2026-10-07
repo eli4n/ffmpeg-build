@@ -67,6 +67,13 @@ linux-*)
 	[ "$(alpine_arch)" = "$want" ] || die "$TARGET needs a $want container, running on $(alpine_arch)"
 	HOST=$(cc -dumpmachine)
 	FF_LDFLAGS=-static
+	# FFmpeg's 32-bit x86 assembly is not position independent, so a static PIE
+	# (Alpine's default) ends up with text relocations. Every other target
+	# stays a static PIE.
+	if [ "$TARGET" = linux-x86 ]; then
+		ARCH_FLAGS="-fno-pie"
+		FF_LDFLAGS="-static -no-pie"
+	fi
 	;;
 windows-x64)
 	[ "$(alpine_arch)" = x86_64 ] || die "$TARGET is built inside an x86_64 container"
@@ -112,7 +119,9 @@ if [ "$ZLIB" = source ]; then
 			cp libz.a "$PREFIX/lib/"
 			cp zlib.h zconf.h "$PREFIX/include/"
 		else
-			CC=$CC_FOR_TARGET CFLAGS="-O2 -fPIC" ./configure --static --prefix="$PREFIX"
+			# --disable-crcvx: zlib's vectorised CRC for s390x is detected but then
+			# compiled without -mvx. The generic CRC is plenty for our use.
+			CC=$CC_FOR_TARGET CFLAGS="-O2 -fPIC" ./configure --static --disable-crcvx --prefix="$PREFIX"
 			make -j"$JOBS" install
 		fi
 	)
@@ -127,6 +136,13 @@ fi
 tar -xzf "$SRC/lame-$LAME_VERSION.tar.gz" -C "$WORK"
 (
 	cd "$WORK/lame-$LAME_VERSION"
+	# LAME's config.sub and config.guess date from 2017 and know neither
+	# riscv64 nor "arm64-apple". The Alpine containers have current ones from
+	# automake; on macOS the BUILD rewrite above is enough.
+	for f in config.sub config.guess; do
+		newer=$(ls /usr/share/automake-*/$f 2>/dev/null | tail -1 || true)
+		if [ -n "$newer" ]; then cp "$newer" "$f"; fi
+	done
 	CC=$CC_FOR_TARGET CFLAGS="-O2 -Wno-implicit-function-declaration" ac_cv_prog_cc_c23=no \
 		./configure --prefix="$PREFIX" --host="$HOST" --build="$BUILD" \
 		--disable-shared --enable-static --disable-frontend --disable-decoder \
