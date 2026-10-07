@@ -5,7 +5,7 @@
 #
 # Targets:
 #   linux-<arch>   inside an Alpine container of that architecture (static, musl)
-#                  arch: x64 arm64 x86 armv7
+#                  arch: x64 arm64 x86
 #   windows-<arch> inside an x86_64 Alpine container with mingw-w64 (cross build)
 #                  arch: x64 x86
 #   darwin-arm64   on an Apple Silicon Mac
@@ -61,7 +61,7 @@ linux-*)
 	case ${TARGET#linux-} in
 	x64) want=x86_64 ;;
 	arm64) want=aarch64 ;;
-	x86 | armv7) want=${TARGET#linux-} ;;
+	x86) want=x86 ;;
 	*) die "unknown target $TARGET" ;;
 	esac
 	[ "$(alpine_arch)" = "$want" ] || die "$TARGET needs a $want container, running on $(alpine_arch)"
