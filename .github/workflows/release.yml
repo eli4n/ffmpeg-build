@@ -1,4 +1,6 @@
 name: Release
+# The version in the title lets the watch workflow tell runs apart.
+run-name: Release ${{ inputs.version || github.ref_name }}
 
 # One release per tag, built exactly once. Push a tag named after the FFmpeg
 # version (9.0.2), or run this workflow by hand with that version. A tag with a

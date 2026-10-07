@@ -68,6 +68,17 @@ Pin the SHA-256 of the binary you use, not the release name.
 
 Third-party actions and container images are pinned by commit and digest.
 
+## Automatic releases
+
+The [*Watch*](.github/workflows/watch.yml) workflow runs once a day. For the
+newest release of every FFmpeg branch from 7.1 on (new branches included) that
+has no release here yet, it starts the *Release* workflow. A version whose
+release run failed or was cancelled is left alone until it is started by hand.
+
+GitHub pauses scheduled workflows in public repositories after 60 days without
+activity in the repository and sends an email first; re-enabling takes one
+click in the Actions tab.
+
 ## Cutting a release
 
 Push a tag named after an FFmpeg release, or start the *Release* workflow by

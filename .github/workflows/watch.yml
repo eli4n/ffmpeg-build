@@ -1,0 +1,49 @@
+name: Watch
+
+# Once a day: start the release workflow for the newest release of every FFmpeg
+# branch from OLDEST_BRANCH on that has no release here yet. New branches are
+# picked up as soon as FFmpeg publishes them.
+#
+# A version whose release run failed or was cancelled is not started again,
+# so a broken build does not fail anew every day. Fix the recipe, then start
+# the Release workflow for that version by hand.
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # gh workflow run; a dispatch with the workflow token does start a run
+  actions: write
+
+concurrency:
+  group: watch
+  cancel-in-progress: false
+
+env:
+  OLDEST_BRANCH: '7.1'
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Start missing releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          started=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --limit 500 \
+            --json displayTitle --jq '.[].displayTitle')
+          for version in $(./latest-releases.sh "$OLDEST_BRANCH"); do
+            if gh release view "$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "$version: released"
+            elif printf '%s\n' "$started" | grep -qxF "Release $version"; then
+              echo "::warning::$version: a release run exists already (running, failed or cancelled); not starting another"
+            else
+              echo "::notice::$version: starting the release"
+              gh workflow run release.yml --repo "$GITHUB_REPOSITORY" -f version="$version"
+            fi
+          done
