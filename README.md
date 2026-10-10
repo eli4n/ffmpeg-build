@@ -14,7 +14,7 @@ and has two variants for each target:
 
 | Variant | What it contains |
 |---|---|
-| `slim` | Only what an audio ingest pipeline needs. Reads MP2, MP3, FLAC, WAV/PCM, Opus (Ogg, WebM), AAC (MP4, ADTS), JPEG, PNG and the image formats used as cover art. Writes MP3 (LAME), PCM, JPEG, PNG and stream copies of the formats above. Filters: `ebur128`, `scale`, `aresample`. **No network protocols at all.** |
+| `slim` | Only what an audio ingest pipeline needs. Reads MP2, MP3, FLAC, WAV/PCM, Opus (Ogg, WebM), AAC (MP4, ADTS, MPEG-TS), JPEG, PNG and the image formats used as cover art; recognises (without decoding) animated PNG. Writes MP3 (LAME), PCM, JPEG, PNG and stream copies of the formats above. Filters: `ebur128`, `scale`, `aresample`. **No network protocols at all.** |
 | `full` | Every decoder, encoder, format, filter and protocol that ships with FFmpeg itself, plus LAME for MP3 encoding. No other external libraries. |
 
 | Target | Built on |

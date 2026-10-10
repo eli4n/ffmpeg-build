@@ -42,7 +42,8 @@ decodes_cleanly() {
 }
 codec_is() {
 	local got
-	got=$(probe -select_streams "$2:0" -show_entries stream=codec_name -of csv=p=0 "$1")
+	# MPEG-TS lists each stream twice (under its program and on its own)
+	got=$(probe -select_streams "$2:0" -show_entries stream=codec_name -of csv=p=0 "$1" | head -1)
 	[ "$got" = "$3" ] || {
 		echo "codec $got, expected $3"
 		return 1
@@ -93,6 +94,14 @@ for spec in tone.mp3:mp3 tone.mp2:mp2 tone.flac:flac tone-s16.wav:pcm_s16le tone
 	check "$name: PCM for a waveform" decodes_to_pcm "$f"
 done
 
+# AAC in MPEG-TS: the backend renames it to .aac and strips into ADTS
+f=$FX/tone.ts
+check "tone.ts: decodes cleanly" decodes_cleanly "$f"
+check "tone.ts: codec aac" codec_is "$f" a aac
+check "tone.ts: every packet readable" sh -c "'$FFPROBE' -v error -show_packets '$f' >/dev/null"
+check "tone.ts: strip metadata into ADTS" "$FFMPEG" -v error -i "$f" -map 0:a -c:a copy -map_metadata -1 -y "$TMP/stripped.aac"
+check "tone.ts: encode to MP3" encodes_mp3 "$f"
+
 # --- Images ----------------------------------------------------------------
 for spec in cover.jpg:mjpeg cover.png:png; do
 	f=$FX/${spec%%:*}
@@ -104,6 +113,7 @@ for spec in cover.jpg:mjpeg cover.png:png; do
 		-frames:v 1 -update 1 -y "$TMP/small.jpg"
 	check "$name: downscale (-s) to PNG" "$FFMPEG" -v error -i "$f" -s 48x32 -y "$TMP/small.png"
 done
+check "animated PNG is recognised as apng" codec_is "$FX/animated.png" v apng
 check "cover dimensions via ffprobe" \
 	test "$(probe -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$FX/cover.png")" = "96,64"
 

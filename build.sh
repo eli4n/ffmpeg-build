@@ -66,13 +66,18 @@ linux-*)
 	esac
 	[ "$(alpine_arch)" = "$want" ] || die "$TARGET needs a $want container, running on $(alpine_arch)"
 	HOST=$(cc -dumpmachine)
-	FF_LDFLAGS=-static
+	# musl gives every new thread a 128 KiB stack unless the binary asks for
+	# more; glibc gives 8 MiB. ffmpeg runs each demuxer, decoder and muxer in a
+	# thread of its own, and with 128 KiB the MPEG-TS demuxer crashed (SIGSEGV)
+	# on an ordinary AAC-in-TS file. Ask for what glibc would give.
+	STACK="-Wl,-z,stack-size=8388608"
+	FF_LDFLAGS="-static $STACK"
 	# FFmpeg's 32-bit x86 assembly is not position independent, so a static PIE
 	# (Alpine's default) ends up with text relocations. Every other target
 	# stays a static PIE.
 	if [ "$TARGET" = linux-x86 ]; then
 		ARCH_FLAGS="-fno-pie"
-		FF_LDFLAGS="-static -no-pie"
+		FF_LDFLAGS="-static -no-pie $STACK"
 	fi
 	;;
 windows-x64 | windows-x86)
@@ -169,7 +174,9 @@ COMMON=(
 SLIM=(
 	--disable-everything --disable-network --disable-avdevice
 	--enable-protocol=file,pipe
-	--enable-demuxer=mp3,flac,wav,ogg,matroska,mov,aac,gif,image2,image_jpeg_pipe,image_png_pipe,image_bmp_pipe,image_gif_pipe
+	# mpegts: broadcast recordings (AAC/MP2 in TS). apng: so an animated PNG is
+	# recognised as such instead of being read as a still PNG.
+	--enable-demuxer=mp3,flac,wav,ogg,matroska,mov,aac,mpegts,gif,apng,image2,image_jpeg_pipe,image_png_pipe,image_bmp_pipe,image_gif_pipe
 	--enable-decoder=mp2,mp2float,mp3,mp3float,flac,opus,aac,aac_fixed,pcm_*,mjpeg,png,bmp,gif
 	--enable-parser=mpegaudio,flac,aac,opus,png,mjpeg,bmp,gif
 	# wrapped_avframe: the default video encoder of "-f null" when an audio

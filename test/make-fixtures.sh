@@ -28,6 +28,13 @@ tone -ar 48000 -c:a libopus -b:a 24k "$F/tone.webm"
 tone -c:a aac -b:a 48k "$F/tone.m4a"
 tone -c:a aac -b:a 48k -f adts "$F/tone.aac"
 
+# AAC in MPEG-TS, as in broadcast recordings. With musl's default 128 KiB
+# thread stacks ffmpeg crashed on exactly this file.
+tone -c:a aac -b:a 48k -f mpegts "$F/tone.ts"
+
+# An animated PNG must be recognised as such (apng), not read as a still PNG
+run -f lavfi -i testsrc=size=64x64:rate=5:duration=1 -plays 0 -f apng "$F/animated.png"
+
 # Deliberately not in slim: Vorbis
 tone -c:a libvorbis -q:a 0 "$F/tone-vorbis.ogg"
 
